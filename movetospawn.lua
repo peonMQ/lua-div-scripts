@@ -1,0 +1,15 @@
+-- --- @type Mq
+-- local mq = require('mq')
+
+-- local function moveToSpawn(name)
+--   printf('\am[%s]\ax Attempting to navigate to Master Translocator %s', logApp, name)
+--   if isSpawn(name) then
+--      if not mq.TLO.Navigation.Active() and not spawnDistanceCheck(name, 10) then
+--        mq.cmdf('/nav spawn npc "%s"', name)
+--      else
+--        printf('\am[%s]\ax Arrived at Master Translocator %s', logApp, name)
+--      end
+--   else
+--      printf('\am[%s]\ax NPC %s not found in zone. Unable to continue.', logApp, name)
+--   end
+-- end
