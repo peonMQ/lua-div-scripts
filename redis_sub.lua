@@ -45,3 +45,23 @@ local function display_values(t, member_state)
       ImGui.NextColumn()
    end
 end
+
+-- ImGui main function for rendering the UI window
+local redis_gv = function()
+    openGUI, shouldDrawGUI = ImGui.Begin('Redis Group Viewer', openGUI)
+    if shouldDrawGUI then
+      ImGui.Columns(2)
+      display_values(publish_members, user)
+    end
+    ImGui.End()
+    if not openGUI then
+        terminate = true
+    end
+end
+
+mq.imgui.init('redisgv', redis_gv)
+
+while not terminate do
+   user = client:hgetall(client_set_key)
+   mq.delay(250)
+end
