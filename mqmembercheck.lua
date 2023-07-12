@@ -1,38 +1,82 @@
 local mq = require('mq')
+local debug = require 'inventory/utils/debug'
 
-local basicTypes = {'Character', 'Target', 'Spawn'}
-local memberCount = 1
+local function spread(array)
+   local t = {}
+   for index, value in ipairs(array) do
+      if index > 1 then
+         table.insert(t, value)
+      end
+   end
 
-for _key, type in pairs(basicTypes) do
-   local index = 0
-   while mq.TLO.Type(type:lower()).Member(index)() do
-      local memberName = mq.TLO.Type(type:lower()).Member(index)()
-      local memberValue = tostring(mq.TLO.Me[memberName]())
-      print(string.format('%d - %s (%s)', memberCount, memberName, memberValue))
-      index = index + 1
-      memberCount = memberCount + 1
+   return array[1], t
+end
+
+local function append(array, value)
+   local t = {}
+   for i, v in ipairs(array) do
+      table.insert(t, v)
+   end
+   table.insert(t, value)
+
+   return t
+end
+
+
+local function getUserDataObject(userdata, userdataPath)
+   local head, rest = spread(userdataPath)
+   if #rest > 0 then
+      return getUserDataObject(userdata[head], rest)
+   end
+
+   return userdata[head]
+end
+
+local tlo = {}
+local mqDataTypes = {}
+--  ~= nil
+local function addTloMember(tloMember, memberType)
+   if tlo[tloMember] == nil then
+      tlo[tloMember] = memberType
    end
 end
 
-local function printMemberItem(index, member, memberType, memberValue)
-  print(string.format('%d. %s (%s) [%s]', index, member, memberType, tostring(memberValue)))
+local function addDataType(type, member, memberType)
+   if mqDataTypes[type] == nil then
+      mqDataTypes[type] = {}
+   end
+
+   if mqDataTypes[type][member] == nil then
+      mqDataTypes[type][member] = memberType
+      return true
+   end
+
+   return false
 end
 
-local function listMembers(dataTypePath, datatype)
-  local index = 0
-  while mq.TLO.Type(datatype).Member(index)() do
-     local member = mq.TLO.Type(datatype).Member(index)()
-     local memberType = mq.gettype(mq.TLO.Me[member])
-     local memberValue = nil
-     if dataTypePath then
-        memberValue = mq.TLO.Me[dataTypePath][member]()
-     else
-        memberValue = mq.TLO.Me[member]()
-     end
-     printMemberItem(index, member, memberType, memberValue)
-     listMembers(member, memberType)
-     index = index + 1
-  end
-end
+local function parseMembers(dataTypePath)
+   local userdata = getUserDataObject(mq.TLO, dataTypePath)
+   local type = mq.gettype(userdata)
+   if #dataTypePath == 1 then
+      addTloMember(dataTypePath[1], type)
+   end
 
-listMembers(nil, 'character')
+   for index = 0, 300 do
+      local member = mq.TLO.Type(type).Member(index)()
+      if member then
+         local memberType = mq.gettype(userdata[member]) or 'function'
+         if addDataType(type, member, memberType) and memberType ~= 'function' then
+            local memberDataTypePath = append(dataTypePath, member)
+            parseMembers(memberDataTypePath)
+         end
+      end
+   end
+ end
+
+-- listMembers(nil, 'character')
+
+parseMembers({'Me'})
+
+local configDir = mq.configDir.."/"
+mq.pickle(configDir.."tlo.lua", tlo)
+mq.pickle(configDir.."mqdatatypes.lua", mqDataTypes)
